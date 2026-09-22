@@ -269,24 +269,11 @@ def discretize_observation(observation):
 
     return state
 
-
-
-
 class Environment:
 
     def __init__(self):
-
-        self.drone1 = Drone(
-            [-5, 0],
-            [5, 0],
-            1.0
-        )
-
-        self.drone2 = Drone(
-            [5, 0],
-            [-5, 0],
-            1.0
-        )
+        self.drone1 = Drone([-5, 0], [5, 0], 1.0)
+        self.drone2 = Drone([5, 0], [-5, 0], 1.0)
 
     def reset(self):
         self.drone1.position = np.array([-5.0, 0.0])
@@ -303,11 +290,8 @@ class Environment:
         return self.get_observations()
 
     def get_observations(self):
-
-        obs1 = get_observation(self.drone1,self.drone2)
-
-        obs2 = get_observation(self.drone2,self.drone1)
-
+        obs1 = get_observation(self.drone1, self.drone2)
+        obs2 = get_observation(self.drone2, self.drone1)
         return obs1, obs2
 
     def step(self, action1, action2):
@@ -323,34 +307,34 @@ class Environment:
         collision = check_collision(self.drone1, self.drone2)
         goal1 = self.drone1.distance_to_goal() < DRONE_RADIUS
         goal2 = self.drone2.distance_to_goal() < DRONE_RADIUS
+
         done = collision or (goal1 and goal2)
-        
+
         new_dist1 = self.drone1.distance_to_goal()
         new_dist2 = self.drone2.distance_to_goal()
 
-        # ---------------- SIMPLE PRIORITY LOGIC ----------------
+        # ========================================================
+        # ---> PASTE THE UPDATED PRIORITY LOGIC HERE <---
+        # ========================================================
         WARNING_DISTANCE = 2.0
         dist_between = np.linalg.norm(self.drone1.position - self.drone2.position)
 
-        # Base progress reward
         reward1 = (old_dist1 - new_dist1) * 10.0
         reward2 = (old_dist2 - new_dist2) * 10.0
 
-        # If they get too close, punish the low-priority drone heavily
         if dist_between < WARNING_DISTANCE:
-            reward1 -= 10.0 * (1.0 - self.drone1.priority)
-            reward2 -= 10.0 * (1.0 - self.drone2.priority)
+            reward1 -= 20.0 * (1.0 - self.drone1.priority)
+            reward2 -= 20.0 * (1.0 - self.drone2.priority)
 
-        # Terminal states
         if collision:
-            reward1 -= 100.0
-            reward2 -= 100.0
-        
+            reward1 -= 200.0 * (1.0 - self.drone1.priority + 0.1)
+            reward2 -= 200.0 * (1.0 - self.drone2.priority + 0.1)
+
         if goal1:
             reward1 += 100.0
         if goal2:
             reward2 += 100.0
-        # -------------------------------------------------------
+        # ========================================================
 
         observations = self.get_observations()
         info = {
@@ -360,7 +344,7 @@ class Environment:
         }
 
         return observations, (reward1, reward2), done, info
-
+    
 class Agent:
     def __init__(self, epsilon=1.0, epsilon_decay=0.995, epsilon_min=0.05):
         self.q_table = {}
